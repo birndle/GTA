@@ -47,10 +47,8 @@ if __name__ == "__main__":
             model.get_training_set()
             # model.get_weights()
             SVs = model.learn_SVM_model(float(args.C))
-            model.feature_visualization()
 
-        # results = zip(*model.classify(query_seqs))
-        # insert_new_rows(results, args.homo)
+        print model.classify(query_seqs)[1]
 
 
 

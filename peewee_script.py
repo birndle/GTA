@@ -16,8 +16,6 @@ def insert_new_rows(data, homo):
 		genes.append(d)
 	iq = InsertQuery(ML, rows=genes)
 	iq.execute()
-	print 'yo'
-
 
 if __name__ ==  '__main__':
 

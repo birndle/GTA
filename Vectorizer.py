@@ -46,56 +46,74 @@ class Vectorizer:
 		return to_prune
 
 
-	def select_features(self, X, y, n=500, method='BNS'):
-		if method == 'unan':
-			zipped = zip(*X)
-			y = np.array(y)
-			scores = []
-			for col in zipped:
-				col = np.array(list(col))
-				pos = col[y==1]
-				tp = pos[pos>0]
-				neg = col[y==0]
-				fp = neg[neg>0]
-				if float(len(tp))/len(pos) > 0.2:
-					print "go GTAs!"
-				if float(len(fp))/len(neg) > 0.2:
-					print "go Viruses"
-				print ">"
+	def select_features(self, X, y, n=500, num_classes=2):
+		
+		def spread(func):
+			ranked_feats = [func(i) for i in range(num_classes)]
+			best_feats_idx = []
+			i = 0
+			
+			while len(best_feats_idx) < n:
+				rankings = list(ranked_feats[i%(num_classes+1)])
+				fx = rankings.pop(0)
+				while fx in best_feats_idx:
+					fx = rankings.pop(0)
+				best_feats_idx.append(fx)
 
-				# print "Percentage of GTAs containing kmer: %f" % (float(len(tp))/len(pos))
-				# print "Percentage of Viruses containing kmer: %f" % (float(len(fp))/len(neg))
+			return best_feats_idx
 
-		if method == 'BNS':
+		def BNS(clas):
 			zipped = zip(*X)
-			y = np.array(y)
+			Y = np.array(y)
 			scores = []
+			pos_scores = []
+			neg_scores = []
+			
 			for col in zipped:
 				col = np.array(list(col))
 				thr = np.average(col)
-				pos = col[y==1]
-				tp = pos[pos>thr]
-				neg = col[y==0]
+				
+				pos = col[Y==clas]
+				tp = pos[pos>thr]				
+				neg = col[Y!=clas]
 				fp = neg[neg>thr]
+
 
 				prev_pos = float(len(tp))/len(pos)
 				prev_neg = float(len(fp))/len(neg)
 
-				bns_score = abs(norm.ppf(prev_pos)-norm.ppf(prev_neg))
+				bns_score = abs(norm.ppf(prev_pos) - norm.ppf(prev_neg))
 				scores.append(bns_score)
-			
+
+				if prev_pos > prev_neg:
+					pos_scores.append(bns_score)
+					neg_scores.append('nope')
+				else:
+					pos_scores.append(bns_score)
+					neg_scores.append('nope')
+
+
+			# scores contains list of BNS scores for every feature
+
+			# get the indicies of the n best features, and sort them from most best to least best
 			n_best_feats_idx = np.array(scores).argsort()[-n:]
 			n_best_feats_idx = n_best_feats_idx[::-1]
-			new_X = []
-			for x in X:
-				new_x = list(x[n_best_feats_idx])
-				new_X.append(new_x)
-			return np.array(new_X), n_best_feats_idx
 
+			# extract the indicies corresponding to GTA-indicative features and Virus-indicative features
+			pos_feats_idx = [i for i in n_best_feats_idx if type(pos_scores[i]) is not str]
+			neg_feats_idx = [i for i in n_best_feats_idx if type(neg_scores[i]) is not str]
+			
+			return n_best_feats_idx
+
+		if num_classes > 2:
+			return spread(BNS)
 		else:
-			selector = SelectKBest(score_func=chi2, k=n)
-			new_X = selector.fit_transform(X,y)
-			return new_X
+			return BNS(0)
+
+		# elif method == 'chi':
+		# 	selector = SelectKBest(score_func=chi2, k=n)
+		# 	new_X = selector.fit_transform(X,y)
+		# 	return new_X
 
 
 

@@ -1,37 +1,55 @@
-import pandas as pd
-from pandas import *
+"""
+INPUT: Name of file containing data table
+RETURNS: tuple containing 3 lists, e.g. (list1, list2, list3)
 
-listA = []
-listB = []
-listC = []
-if __name__ == '__main__':
-	df = pd.read_table('reordered_snps.txt')
+Each list contains tuples of 7 values. Each of these tuples corresponds to a different conserved column.
+The 7 values contained in the tuples are the positions within the respective, unaligned genomes 
+corresponding to the conserved column of the alignment.
+
+list1: first 4 conserved AND second 3 conserved, BUT different
+list2: first 4 conserved, second 3 NOT conserved
+list3: first 4 NOT conserved, second 3 conserved
+"""
+
+def get_conserved_positions(table_file):
+	import pandas as pd
+	from pandas import *
+
+	listA = []
+	listB = []
+	listC = []
+
+	df = pd.read_table(table_file)
 	
 	def regex_fcn(row):		
 		import re
 
-		# first 3 sequences conserved, second 3 conserved but different
+		# first 4 sequences conserved, second 3 conserved but different
 		def critA(s): 
-			regex = r'(\w)\1{2}(?!\1)(\w)\2{2}'
+			regex = r'(\w)\1{3}(?!\1)(\w)\2{2}'
 			if re.search(regex, s):
 				return True
 			else:
 				return False
 
-		# first 3 conserved, second 3 not conserved
+		# first 4 conserved, second 3 not conserved
 		def critB(s):
-			regex = r'(\w)\1{2}(\w)(\w)(?:(?!\2)|(?!\3))\w'
+			regex = r'(\w)\1{3}(\w)(\w)(?:(?!\2)|(?!\3))\w'
 			if re.search(regex, s):
 				return True
 			else:
 				return False
 
-		# second 3 conserved, first 3 not conserved
+		# first 4 not conserved, second 3 conserved
 		def critC(s):
-			regex= r'(\w)(\w)(?:(?!\1)|(?!\2))\w(\w)\3{2}'
+			regex= r'(\w)(\w)(\w)(?:(?!\1)|(?!\2)|(?!\3))\w(\w)\4{2}'
+			if re.search(regex, s):
+				return True
+			else:
+				return False
 
 		seq = row['SNP pattern']
-		pos = tuple([row[i] for i in range(1,7)])
+		pos = tuple([row[i] for i in range(1,8)])
 
 		if critA(seq):
 			listA.append(pos)
@@ -41,3 +59,7 @@ if __name__ == '__main__':
 			listC.append(pos)
 
 	df.apply(regex_fcn, axis=1)
+	
+	return (listA, listB, listC)
+
+
